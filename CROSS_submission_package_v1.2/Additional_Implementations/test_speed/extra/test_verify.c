@@ -7,7 +7,7 @@
 #include "api.h"
 #include "csprng_hash.h"
 
-#define NUM_TESTS 1000 //100000
+#define NUM_TESTS 10000 //100000
 #define PROGRESS 300
 
 void simple_randombytes(unsigned char *x, unsigned long long xlen) {
@@ -51,32 +51,34 @@ int main() {
     simple_randombytes(entropy_input, 48);;
     initialize_csprng(&platform_csprng_state, (const unsigned char *)entropy_input, 48);
 
-    // printf("\nRunning %d keypair+sign+open with MLEN=%lld\n", NUM_TESTS, mlen);
+    // TODO: move initialization inside/outside the for loop
+    simple_randombytes(m, mlen); 
 
-    clock_t t_key = 0;
-    clock_t t_sig = 0;
-    clock_t t_ope = 0;
-    clock_t t_tmp = 0;
+    printf("\nRunning %d keypair+sign+open with MLEN=%lld\n", NUM_TESTS, mlen);
+
+    int failures = 0;
 
     for(int i=0; i<NUM_TESTS; i++) {
-
-        // TODO: move initialization inside/outside the for loop
-        simple_randombytes(m, mlen); 
-        
-        t_tmp = clock();
-        crypto_sign_keypair(pk, sk);
-        t_tmp = clock() - t_tmp;
-        t_key += t_tmp;
-        t_tmp = clock();
-        crypto_sign(sm, &smlen, m, mlen, sk);
-        t_tmp = clock() - t_tmp;
-        t_sig += t_tmp;
-        t_tmp = clock();
-        crypto_sign_open(m1, &mlen1, sm, smlen, pk);
-        t_tmp = clock() - t_tmp;
-        t_ope += t_tmp;
+        if ( crypto_sign_keypair(pk, sk) != 0) {
+            printf("\n\n **** KEYPAIR ERROR ****\n\n");
+            exit(-1);         
+        }
+        if ( crypto_sign(sm, &smlen, m, mlen, sk) != 0) {
+            printf("\n\n **** SIGN ERROR ****\n\n");
+            exit(-1);
+        }
+        if ( crypto_sign_open(m1, &mlen1, sm, smlen, pk) != 0) {
+            printf("\n\n **** VERIFY ERROR ****\n\n");
+            exit(-1);
+            failures++;
+        }
+        if((i%PROGRESS == 0) && i) {
+            printf(".");
+            fflush(stdin);
+        }
     }
-    printf("%-15i %-15i %-15i\n", t_key, t_sig, t_ope);
+    if(failures) printf("\nFailure rate: %f\n", (float)failures/(float)NUM_TESTS);
+    printf("\n");
 
     free(m);
     free(m1);

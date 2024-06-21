@@ -9,7 +9,7 @@ set(CC gcc)
 #set(CMAKE_C_FLAGS  "${CMAKE_C_FLAGS} ${SANITIZE}")
 
 ########
-set(CMAKE_C_FLAGS  "${CMAKE_C_FLAGS} -march=native -O3 -g3")
+set(CMAKE_C_FLAGS  "${CMAKE_C_FLAGS} -mavx2 -O3")
 #set(CMAKE_C_FLAGS  "${CMAKE_C_FLAGS} -march=native -O3 -g3 -std=c99 -Wpedantic -Werror -Wuninitialized -Wall ")
 #set(CMAKE_C_FLAGS  "${CMAKE_C_FLAGS} -Wredundant-decls -Wmissing-prototypes -Wextra -fomit-frame-pointer")
 #set(CMAKE_C_FLAGS  "${CMAKE_C_FLAGS} -fsanitize=address,undefined")
@@ -64,6 +64,13 @@ set(HEADERS
     ${COMMON_DIR}/include/sha3.h
     ${COMMON_DIR}/include/merkle_tree.h
     ${COMMON_DIR}/include/merkle.h
+    # keccak-times4
+    ${COMMON_DIR}/keccak-times4/align.h
+    ${COMMON_DIR}/keccak-times4/brg_endian.h
+    ${COMMON_DIR}/keccak-times4/KeccakP-1600-times4-SnP.h
+    ${COMMON_DIR}/keccak-times4/my_constants.h
+    ${COMMON_DIR}/keccak-times4/my_par_keccak.h
+    ${COMMON_DIR}/keccak-times4/SIMD256-config.h
 )
 
 if(STANDALONE_KECCAK)
@@ -89,32 +96,62 @@ set(SOURCES
     ${COMMON_DIR}/lib/seedtree.c
     ${COMMON_DIR}/lib/merkle.c
     ${COMMON_DIR}/lib/sign.c
+    # keccak-times4
+    ${COMMON_DIR}/keccak-times4/KeccakP-1600-times4-SIMD256.c
+    ${COMMON_DIR}/keccak-times4/my_par_keccak.c
 )
 
 ########
 
-set(category 1) # 1 3 5
-set(RSDP_VARIANT RSDP) # RSDP RSDPG
-set(optimiz_target BALANCED) # SPEED BALANCED SIZE
-#set(REFERENCE 1)
+# set(category 5) # 1 3 5
+# set(RSDP_VARIANT RSDP) # RSDP RSDPG
+# set(optimiz_target BALANCED) # SPEED BALANCED SIZE
+# #set(REFERENCE 1)
 
 ########
 
-if(optimiz_target STREQUAL SPEED)
-    set(OMIT_SEED_TREE "-DNO_TREES=1")
-else()
-    set(OMIT_SEED_TREE "")
-endif()
+# if(optimiz_target STREQUAL SPEED)
+#     set(OMIT_SEED_TREE "-DNO_TREES=1")
+# else()
+#     set(OMIT_SEED_TREE "")
+# endif()
 
-set(TARGET_BINARY_NAME test_speed.o)
-add_executable(${TARGET_BINARY_NAME} ${HEADERS} ${SOURCES}
+# set(TARGET_BINARY_NAME test_speed.o)
+# add_executable(${TARGET_BINARY_NAME} ${HEADERS} ${SOURCES}
+#                                 ./test_speed.c)
+# target_include_directories(${TARGET_BINARY_NAME} PRIVATE
+#                         ${BASE_DIR}/include
+#                         ${COMMON_DIR}/include
+#                         ./include)
+# target_link_libraries(${TARGET_BINARY_NAME} m ssl crypto ${SANITIZE} ${KECCAK_EXTERNAL_LIB})
+# set_target_properties(${TARGET_BINARY_NAME} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ./bin)
+# set_property(TARGET ${TARGET_BINARY_NAME} APPEND PROPERTY
+#     COMPILE_FLAGS "${OMIT_SEED_TREE} -DCATEGORY_${category}=1 -D${optimiz_target}=1 -D${RSDP_VARIANT}=1 ${KECCAK_EXTERNAL_ENABLE} ")        
+
+
+
+foreach(category RANGE 1 5 2)
+    set(RSDP_VARIANTS RSDP RSDPG)
+    foreach(RSDP_VARIANT ${RSDP_VARIANTS})
+        set(PARAM_TARGETS SIG_SIZE BALANCED SPEED)
+        foreach(optimiz_target ${PARAM_TARGETS})
+             if(optimiz_target STREQUAL SPEED)
+                set(OMIT_SEED_TREE "-DNO_TREES=1")
+             else()
+                set(OMIT_SEED_TREE "")
+             endif()
+             # settings for benchmarking binary
+             set(TARGET_BINARY_NAME test_speed_${RSDP_VARIANT}_${category}_${optimiz_target}.o)
+             add_executable(${TARGET_BINARY_NAME} ${HEADERS} ${SOURCES}
                                 ./test_speed.c)
-target_include_directories(${TARGET_BINARY_NAME} PRIVATE
-                        ${BASE_DIR}/include
-                        ${COMMON_DIR}/include
-                        ./include)
-target_link_libraries(${TARGET_BINARY_NAME} m ssl crypto ${SANITIZE} ${KECCAK_EXTERNAL_LIB})
-set_target_properties(${TARGET_BINARY_NAME} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ./bin)
-set_property(TARGET ${TARGET_BINARY_NAME} APPEND PROPERTY
-    COMPILE_FLAGS "${OMIT_SEED_TREE} -DCATEGORY_${category}=1 -D${optimiz_target}=1 -D${RSDP_VARIANT}=1 ${KECCAK_EXTERNAL_ENABLE} ")        
-
+             target_include_directories(${TARGET_BINARY_NAME} PRIVATE
+                                        ${BASE_DIR}/include
+                                        ${COMMON_DIR}/include
+                                        ./include)
+             target_link_libraries(${TARGET_BINARY_NAME} m ssl crypto ${SANITIZE} ${KECCAK_EXTERNAL_LIB})
+             set_target_properties(${TARGET_BINARY_NAME} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ./bin)
+             set_property(TARGET ${TARGET_BINARY_NAME} APPEND PROPERTY
+                 COMPILE_FLAGS "${OMIT_SEED_TREE} -DCATEGORY_${category}=1 -D${optimiz_target}=1 -D${RSDP_VARIANT}=1 ${KECCAK_EXTERNAL_ENABLE} ")        
+        endforeach(optimiz_target)
+    endforeach(RSDP_VARIANT)
+endforeach(category)

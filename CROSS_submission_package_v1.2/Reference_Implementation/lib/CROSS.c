@@ -509,7 +509,7 @@ int CROSS_verify(const pubkey_t *const PK,
         }
     } /* end for iterating on ZKID iterations */
 
-    assert(is_signature_ok);
+    //assert(is_signature_ok);
 
     uint8_t commit_digests[2][HASH_DIGEST_LENGTH];
     merkle_tree_root_recompute(commit_digests[0],
@@ -537,12 +537,12 @@ int CROSS_verify(const pubkey_t *const PK,
     int does_digest_01_match = ( memcmp(digest_01_recomputed,
                                         sig->digest_01,
                                         HASH_DIGEST_LENGTH) == 0);
-    assert(does_digest_01_match);
+    //assert(does_digest_01_match);
 
     int does_digest_b_match = ( memcmp(digest_b_recomputed,
                                         sig->digest_b,
                                         HASH_DIGEST_LENGTH) == 0);
-    assert(does_digest_b_match);
+    //assert(does_digest_b_match);
 
     is_signature_ok = is_signature_ok &&
                       does_digest_01_match &&

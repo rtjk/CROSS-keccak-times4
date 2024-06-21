@@ -1,0 +1,12 @@
+// RATES
+#define SHAKE128_RATE (168)
+#define SHAKE256_RATE (136)
+#define RATE SHAKE256_RATE
+
+// DOMAIN SEPARATORS
+#define SHAKE128_DS (0x1F)
+#define SHAKE256_DS (0x1F)
+#define DS SHAKE256_DS
+
+#define WORD (64)
+#define MAX_LANES (1152/64 - 1)

@@ -126,3 +126,68 @@ void xof_shake_extract(SHAKE_STATE_STRUCT *state,
 #endif
 }
 #endif
+
+///////////////////////////////////////////////////////////////
+//                    SHAKE x4 wrappers                      //
+///////////////////////////////////////////////////////////////
+#include "../keccak-times4/my_par_keccak.h"
+#define SHAKE_X4_STATE_STRUCT my_par_keccak_context
+static inline void xof_shake_x4_init(SHAKE_X4_STATE_STRUCT *states) {
+   my_par_keccak_start(states);
+}
+static inline void xof_shake_x4_update(SHAKE_X4_STATE_STRUCT *states,
+                      const unsigned char *in1,
+                      const unsigned char *in2,
+                      const unsigned char *in3,
+                      const unsigned char *in4,
+                      uint32_t singleInputByteLen) {
+   my_par_keccak_input(states, in1, in2, in3, in4, singleInputByteLen);
+}
+static inline void xof_shake_x4_final(SHAKE_X4_STATE_STRUCT *states) {
+   my_par_keccak_stop(states);
+}
+static inline void xof_shake_x4_extract(SHAKE_X4_STATE_STRUCT *states,
+                       unsigned char *out1,
+                       unsigned char *out2,
+                       unsigned char *out3,
+                       unsigned char *out4,
+                       uint32_t singleOutputByteLen){
+   my_par_keccak_output(states, out1, out2, out3, out4, singleOutputByteLen);
+}
+///////////////////////////////////////////////////////////////
+//                    SHAKE x2 wrappers                      //
+///////////////////////////////////////////////////////////////
+typedef struct {
+   SHAKE_STATE_STRUCT state1;
+   SHAKE_STATE_STRUCT state2;
+} shake_x2_ctx;
+#define SHAKE_X2_STATE_STRUCT shake_x2_ctx
+static inline void xof_shake_x2_init(SHAKE_X2_STATE_STRUCT *states) {
+   xof_shake_init(&(states->state1), 0);
+   xof_shake_init(&(states->state2), 0);
+}
+static inline void xof_shake_x2_update(SHAKE_X2_STATE_STRUCT *states,
+                      const unsigned char *in1,
+                      const unsigned char *in2,
+                      uint32_t singleInputByteLen) {
+   xof_shake_update(&(states->state1), (const uint8_t *)in1, singleInputByteLen);
+   xof_shake_update(&(states->state2), (const uint8_t *)in2, singleInputByteLen);
+}
+static inline void xof_shake_x2_final(SHAKE_X2_STATE_STRUCT *states) {
+   xof_shake_final(&(states->state1));
+   xof_shake_final(&(states->state2));
+}
+static inline void xof_shake_x2_extract(SHAKE_X2_STATE_STRUCT *states,
+                       unsigned char *out1,
+                       unsigned char *out2,
+                       uint32_t singleOutputByteLen){
+   xof_shake_extract(&(states->state1), out1, singleOutputByteLen);
+   xof_shake_extract(&(states->state2), out2, singleOutputByteLen);
+}
+///////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////
+typedef struct {
+   SHAKE_STATE_STRUCT state1;
+   SHAKE_X2_STATE_STRUCT state2;
+   SHAKE_X4_STATE_STRUCT state4;
+} par_shake_ctx;
