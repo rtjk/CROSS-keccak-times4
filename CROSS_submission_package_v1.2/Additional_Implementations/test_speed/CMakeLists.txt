@@ -9,7 +9,8 @@ set(CC gcc)
 #set(CMAKE_C_FLAGS  "${CMAKE_C_FLAGS} ${SANITIZE}")
 
 ########
-set(CMAKE_C_FLAGS  "${CMAKE_C_FLAGS} -mavx2 -O3")
+set(CMAKE_C_FLAGS  "${CMAKE_C_FLAGS} -march=native -O3")
+#set(CMAKE_C_FLAGS  "${CMAKE_C_FLAGS} -mavx2 -O3")
 #set(CMAKE_C_FLAGS  "${CMAKE_C_FLAGS} -march=native -O3 -g3 -std=c99 -Wpedantic -Werror -Wuninitialized -Wall ")
 #set(CMAKE_C_FLAGS  "${CMAKE_C_FLAGS} -Wredundant-decls -Wmissing-prototypes -Wextra -fomit-frame-pointer")
 #set(CMAKE_C_FLAGS  "${CMAKE_C_FLAGS} -fsanitize=address,undefined")
@@ -85,7 +86,6 @@ else()
   set(KECCAK_EXTERNAL_ENABLE "-DSHA_3_LIBKECCAK")
 endif()
 
-
 set(SOURCES
     ${SPEC_SOURCES}
     ${FALLBACK_SOURCES}
@@ -103,9 +103,9 @@ set(SOURCES
 
 ########
 
-# set(category 5) # 1 3 5
+# set(category 3) # 1 3 5
 # set(RSDP_VARIANT RSDP) # RSDP RSDPG
-# set(optimiz_target BALANCED) # SPEED BALANCED SIZE
+# set(optimiz_target SPEED) # SPEED BALANCED SIG_SIZE
 # #set(REFERENCE 1)
 
 ########

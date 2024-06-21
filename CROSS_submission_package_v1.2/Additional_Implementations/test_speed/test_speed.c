@@ -3,6 +3,7 @@
 #include <string.h>
 #include <ctype.h>
 #include <time.h>
+#include <assert.h>
 
 #include "api.h"
 #include "csprng_hash.h"
@@ -58,23 +59,23 @@ int main() {
     clock_t t_ope = 0;
     clock_t t_tmp = 0;
 
+    int errors = 0;
+
     for(int i=0; i<NUM_TESTS; i++) {
 
-        // TODO: move initialization inside/outside the for loop
-        simple_randombytes(m, mlen); 
-        
         t_tmp = clock();
-        crypto_sign_keypair(pk, sk);
+        errors += crypto_sign_keypair(pk, sk);
         t_tmp = clock() - t_tmp;
         t_key += t_tmp;
         t_tmp = clock();
-        crypto_sign(sm, &smlen, m, mlen, sk);
+        errors += crypto_sign(sm, &smlen, m, mlen, sk);
         t_tmp = clock() - t_tmp;
         t_sig += t_tmp;
         t_tmp = clock();
-        crypto_sign_open(m1, &mlen1, sm, smlen, pk);
+        errors += crypto_sign_open(m1, &mlen1, sm, smlen, pk);
         t_tmp = clock() - t_tmp;
         t_ope += t_tmp;
+        assert(errors == 0);
     }
     printf("%-15i %-15i %-15i\n", t_key, t_sig, t_ope);
 

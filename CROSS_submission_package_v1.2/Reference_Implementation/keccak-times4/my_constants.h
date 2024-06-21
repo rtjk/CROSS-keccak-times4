@@ -1,7 +1,13 @@
 // RATES
 #define SHAKE128_RATE (168)
 #define SHAKE256_RATE (136)
-#define RATE SHAKE256_RATE
+
+// CROSS category 1 uses SHAKE128
+#if defined(CATEGORY_1)
+    #define RATE SHAKE128_RATE
+#else
+    #define RATE SHAKE256_RATE
+#endif
 
 // DOMAIN SEPARATORS
 #define SHAKE128_DS (0x1F)

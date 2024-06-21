@@ -4,3 +4,8 @@ rm -rf build; mkdir build && cd build && cmake ../ && make && echo "# BUILD AND 
 
 # reference
 rm -rf build; mkdir build && cd build && cmake ../ -DREFERENCE=1 && make && echo "# BUILD AND MAKE DONE" ; cd .. && ./build/bin/test_speed.o
+
+# print speed
+rm -rf build; mkdir build && cd build && cmake ../ && make && echo "# BUILD AND MAKE DONE" ; cd ..
+cd build/bin
+for file in *; do if [[ -x "$file" && ! -d "$file" ]]; then echo "$file"; ./"$file"; fi; done
