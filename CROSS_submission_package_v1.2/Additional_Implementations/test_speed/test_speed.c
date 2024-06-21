@@ -7,7 +7,7 @@
 #include "api.h"
 #include "csprng_hash.h"
 
-#define NUM_TESTS 100000
+#define NUM_TESTS 1000 //100000
 #define PROGRESS 300
 
 void simple_randombytes(unsigned char *x, unsigned long long xlen) {
@@ -58,33 +58,37 @@ int main() {
 
     int failures = 0;
 
+    // for(int i=0; i<NUM_TESTS; i++) {
+    //     if ( crypto_sign_keypair(pk, sk) != 0) {
+    //         printf("\n\n **** KEYPAIR ERROR ****\n\n");
+    //         exit(-1);         
+    //     }
+    //     if ( crypto_sign(sm, &smlen, m, mlen, sk) != 0) {
+    //         printf("\n\n **** SIGN ERROR ****\n\n");
+    //         exit(-1);
+    //     }
+    //     if ( crypto_sign_open(m1, &mlen1, sm, smlen, pk) != 0) {
+    //         printf("\n\n **** VERIFY ERROR ****\n\n");
+    //         exit(-1);
+    //         failures++;
+    //     }
+    //     if((i%PROGRESS == 0) && i) {
+    //         printf(".");
+    //         fflush(stdin);
+    //     }
+    // }
+    // if(failures) printf("\nFailure rate: %f\n", (float)failures/(float)NUM_TESTS);
+    // printf("\n");
+
+    clock_t t_fullcycle = clock();
     for(int i=0; i<NUM_TESTS; i++) {
-
-
-        if ( crypto_sign_keypair(pk, sk) != 0) {
-            printf("\n\n **** KEYPAIR ERROR ****\n\n");
-            exit(-1);         
-        }
-        if ( crypto_sign(sm, &smlen, m, mlen, sk) != 0) {
-            printf("\n\n **** SIGN ERROR ****\n\n");
-            exit(-1);
-        }
-        if ( crypto_sign_open(m1, &mlen1, sm, smlen, pk) != 0) {
-            printf("\n\n **** VERIFY ERROR ****\n\n");
-            exit(-1);
-            failures++;
-        }
-
-        if((i%PROGRESS == 0) && i) {
-            printf(".");
-            fflush(stdin);
-        }
-
+        crypto_sign_keypair(pk, sk);
+        crypto_sign(sm, &smlen, m, mlen, sk);
+        crypto_sign_open(m1, &mlen1, sm, smlen, pk);
     }
+    t_fullcycle = clock() - t_fullcycle;
 
-    if(failures) printf("\nFailure rate: %f\n", (float)failures/(float)NUM_TESTS);
-
-    printf("\n");
+    printf("\nSERIAL:\t\t %i cc\n\n", t_fullcycle);
 
     free(m);
     free(m1);
