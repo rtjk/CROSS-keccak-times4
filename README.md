@@ -1,5 +1,7 @@
 # CROSS-keccak-times4
 
+Adds the [parallel and incremental version of Keccak](https://github.com/rtjk/keccak-parallel-incremental) to the signature scheme [CROSS](https://www.cross-crypto.com/) and measures the difference in signing and verifying speed.
+
 Test setup:
 * CPU: `Intel(R) Core(TM) i7-6500U CPU @ 2.50GHz`
 * Battery: plugged in, not charging
