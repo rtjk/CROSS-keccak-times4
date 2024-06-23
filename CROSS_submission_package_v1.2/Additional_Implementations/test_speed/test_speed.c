@@ -48,11 +48,9 @@ int main() {
 
     setbuf(stdout, NULL);
 
-    // TODO: move initialization inside/outside the for loop
+    // TODO: move randomization inside/outside the for loop
     simple_randombytes(entropy_input, 48);;
     initialize_csprng(&platform_csprng_state, (const unsigned char *)entropy_input, 48);
-
-    // printf("\nRunning %d keypair+sign+open with MLEN=%lld\n", NUM_TESTS, mlen);
 
     clock_t t_key = 0;
     clock_t t_sig = 0;
@@ -62,6 +60,9 @@ int main() {
     int errors = 0;
 
     for(int i=0; i<NUM_TESTS; i++) {
+
+        // TODO: move randomization inside/outside the for loop
+        simple_randombytes(m, mlen); 
 
         t_tmp = clock();
         errors += crypto_sign_keypair(pk, sk);
