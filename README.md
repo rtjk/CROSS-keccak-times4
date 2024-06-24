@@ -29,3 +29,12 @@ Run speed test:
     cd build/bin
     for file in *; do if [[ -x "$file" && ! -d "$file" ]]; then echo "$file"; ./"$file"; fi; done
     ```
+
+#
+
+```
+TODO:
+- in csprng_hash.h setup unique API for hashing and csprng
+- verify the usability of SHA_3_LIBKECCAK in sha3.h
+- add ifdefs to only use parallel keccak when compiling for avx2
+```
