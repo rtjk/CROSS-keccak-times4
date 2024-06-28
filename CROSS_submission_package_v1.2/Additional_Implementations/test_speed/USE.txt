@@ -7,5 +7,6 @@ rm -rf build; mkdir build && cd build && cmake ../ -DREFERENCE=1 && make && echo
 
 # print speed
 rm -rf build; mkdir build && cd build && cmake ../ && make && echo "# BUILD AND MAKE DONE" ; cd ..
+sudo cpufreq-set -c 0 --min 400000 --max 400000 && sudo cpufreq-set -c 1 --min 400000 --max 400000 && sudo cpufreq-set -c 2 --min 400000 --max 400000 && sudo cpufreq-set -c 3 --min 400000 --max 400000
 cd build/bin
 for file in *; do if [[ -x "$file" && ! -d "$file" ]]; then echo "$file"; ./"$file"; fi; done

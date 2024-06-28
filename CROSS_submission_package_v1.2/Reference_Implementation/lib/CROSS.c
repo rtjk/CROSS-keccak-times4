@@ -138,6 +138,11 @@ void CROSS_keygen(prikey_t *SK,
   pack_fq_syn(PK->s,pub_syn);
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 /* sign cannot fail */
 void CROSS_sign(const prikey_t *SK,
                const char *const m,
@@ -178,33 +183,46 @@ void CROSS_sign(const prikey_t *SK,
     FQ_ELEM s_tilde[N-K];
 
 #if defined(RSDP)
-    uint8_t cmt_0_i_input[DENSELY_PACKED_FQ_SYN_SIZE+
-                          DENSELY_PACKED_FZ_VEC_SIZE+
-                          SALT_LENGTH_BYTES+sizeof(uint16_t)];
+    uint8_t cmt_0_i_input[4][DENSELY_PACKED_FQ_SYN_SIZE+
+                            DENSELY_PACKED_FZ_VEC_SIZE+
+                            SALT_LENGTH_BYTES+sizeof(uint16_t)];
     const int offset_salt = DENSELY_PACKED_FQ_SYN_SIZE+DENSELY_PACKED_FZ_VEC_SIZE;
     const int offset_round_idx = offset_salt+SALT_LENGTH_BYTES;
 #elif defined(RSDPG)
     FZ_ELEM zeta_tilde[M];
     FZ_ELEM delta[T][M];
-    uint8_t cmt_0_i_input[DENSELY_PACKED_FQ_SYN_SIZE+
-                          DENSELY_PACKED_FZ_RSDP_G_VEC_SIZE+
-                          SALT_LENGTH_BYTES+sizeof(uint16_t)];
+    uint8_t cmt_0_i_input[4][DENSELY_PACKED_FQ_SYN_SIZE+
+                            DENSELY_PACKED_FZ_RSDP_G_VEC_SIZE+
+                            SALT_LENGTH_BYTES+sizeof(uint16_t)];
     const int offset_salt = DENSELY_PACKED_FQ_SYN_SIZE+DENSELY_PACKED_FZ_RSDP_G_VEC_SIZE;
     const int offset_round_idx = offset_salt+SALT_LENGTH_BYTES;
 #endif
-    /* cmt_0_i_input is syndrome||sigma ||salt ; place salt at the end */
-    memcpy(cmt_0_i_input+offset_salt, sig->salt, SALT_LENGTH_BYTES);
 
-    uint8_t cmt_1_i_input[SEED_LENGTH_BYTES+
+    uint8_t cmt_1_i_input[4][SEED_LENGTH_BYTES+
                           SALT_LENGTH_BYTES+sizeof(uint16_t)];
-    /* cmt_1_i_input is concat(seed,salt,round index) */
-    memcpy(cmt_1_i_input+SEED_LENGTH_BYTES, sig->salt, SALT_LENGTH_BYTES);
+
+    /* place the salt in the hash input for all parallel instances of keccak */
+    for(int instance=0; instance<4; instance++) {
+        /* cmt_0_i_input is syndrome||sigma ||salt ; place salt at the end */
+        memcpy(cmt_0_i_input[instance]+offset_salt, sig->salt, SALT_LENGTH_BYTES);
+        /* cmt_1_i_input is concat(seed,salt,round index) */
+        memcpy(cmt_1_i_input[instance]+SEED_LENGTH_BYTES, sig->salt, SALT_LENGTH_BYTES);
+    }
 
     uint8_t cmt_0[T][HASH_DIGEST_LENGTH] = {0};
     uint8_t cmt_1[T][HASH_DIGEST_LENGTH] = {0};
 
+    /* enqueue the calls to hash */
+    int to_hash = 0;
+    int round_idx_queue[4] = {0};
+
     CSPRNG_STATE_T CSPRNG_state;
     for(uint16_t i = 0; i<T; i++){
+        
+        /* save the index for the hash output */
+        to_hash++;
+        round_idx_queue[to_hash-1] = i;
+
         /* CSPRNG is fed with concat(seed,salt,round index) represented
          * as a 2 bytes little endian unsigned integer */
         uint8_t csprng_input[SEED_LENGTH_BYTES+SALT_LENGTH_BYTES+sizeof(uint16_t)];
@@ -243,27 +261,54 @@ void CROSS_sign(const prikey_t *SK,
         fq_dz_norm_synd(s_tilde);
 
         /* cmt_0_i_input contains s-tilde || sigma_i || salt */
-        pack_fq_syn(cmt_0_i_input,s_tilde);
+        pack_fq_syn(cmt_0_i_input[to_hash-1],s_tilde);
 
 #if defined(RSDP)
-        pack_fz_vec(cmt_0_i_input + DENSELY_PACKED_FQ_SYN_SIZE, sigma[i]);
+        pack_fz_vec(cmt_0_i_input[to_hash-1] + DENSELY_PACKED_FQ_SYN_SIZE, sigma[i]);
 #elif defined(RSDPG)
-        pack_fz_rsdp_g_vec(cmt_0_i_input + DENSELY_PACKED_FQ_SYN_SIZE, delta[i]);
+        pack_fz_rsdp_g_vec(cmt_0_i_input[to_hash-1] + DENSELY_PACKED_FQ_SYN_SIZE, delta[i]);
 #endif
         /* Fixed endianness marshalling of round counter
          * i+c+dsc */
         uint16_t domain_sep_idx_hash = domain_sep_i+HASH_CSPRNG_DOMAIN_SEP_CONST;
-        cmt_0_i_input[offset_round_idx] = (domain_sep_idx_hash >> 8) & 0xFF;
-        cmt_0_i_input[offset_round_idx+1] = domain_sep_idx_hash & 0xFF;
+        cmt_0_i_input[to_hash-1][offset_round_idx] = (domain_sep_idx_hash >> 8) & 0xFF;
+        cmt_0_i_input[to_hash-1][offset_round_idx+1] = domain_sep_idx_hash & 0xFF;
 
-        hash(cmt_0[i],cmt_0_i_input,sizeof(cmt_0_i_input));
-        memcpy(cmt_1_i_input,
+        memcpy(cmt_1_i_input[to_hash-1],
                rounds_seeds+SEED_LENGTH_BYTES*i,
                SEED_LENGTH_BYTES);
         
-        cmt_1_i_input[SEED_LENGTH_BYTES+SALT_LENGTH_BYTES] = (domain_sep_idx_hash >> 8) &0xFF;
-        cmt_1_i_input[SEED_LENGTH_BYTES+SALT_LENGTH_BYTES+1] = domain_sep_idx_hash & 0xFF;
-        hash(cmt_1[i],cmt_1_i_input,sizeof(cmt_1_i_input));
+        cmt_1_i_input[to_hash-1][SEED_LENGTH_BYTES+SALT_LENGTH_BYTES] = (domain_sep_idx_hash >> 8) &0xFF;
+        cmt_1_i_input[to_hash-1][SEED_LENGTH_BYTES+SALT_LENGTH_BYTES+1] = domain_sep_idx_hash & 0xFF;
+
+        /* hash in batches of 4 (or less on the last round) */
+        if(to_hash == 4 || i == T-1){
+            par_hash(
+                to_hash,
+                cmt_0[round_idx_queue[0]],
+                cmt_0[round_idx_queue[1]],
+                cmt_0[round_idx_queue[2]],
+                cmt_0[round_idx_queue[3]],
+                cmt_0_i_input[0],
+                cmt_0_i_input[1],
+                cmt_0_i_input[2],
+                cmt_0_i_input[3],
+                sizeof(cmt_0_i_input)/4
+            );
+            par_hash(
+                to_hash,
+                cmt_1[round_idx_queue[0]],
+                cmt_1[round_idx_queue[1]],
+                cmt_1[round_idx_queue[2]],
+                cmt_1[round_idx_queue[3]],
+                cmt_1_i_input[0],
+                cmt_1_i_input[1],
+                cmt_1_i_input[2],
+                cmt_1_i_input[3],
+                sizeof(cmt_1_i_input)/4
+            );
+            to_hash = 0;
+        }
     }
 
     /* vector containing d_0 and d_1 from spec */
@@ -340,6 +385,11 @@ void CROSS_sign(const prikey_t *SK,
         }
     }
 }
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 /* verify returns 1 if signature is ok, 0 otherwise */
 int CROSS_verify(const pubkey_t *const PK,

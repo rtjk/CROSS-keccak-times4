@@ -103,9 +103,9 @@ set(SOURCES
 
 ########
 
-# set(category 3) # 1 3 5
+# set(category 1) # 1 3 5
 # set(RSDP_VARIANT RSDP) # RSDP RSDPG
-# set(optimiz_target SPEED) # SPEED BALANCED SIG_SIZE
+# set(optimiz_target BALANCED) # SPEED BALANCED SIG_SIZE
 # #set(REFERENCE 1)
 
 ########

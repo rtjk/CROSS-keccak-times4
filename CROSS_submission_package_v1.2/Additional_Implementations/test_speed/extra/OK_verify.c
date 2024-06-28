@@ -74,7 +74,7 @@ int main() {
         }
         if((i%PROGRESS == 0) && i) {
             printf(".");
-            fflush(stdin);
+            fflush(stdout);
         }
     }
     if(failures) printf("\nFailure rate: %f\n", (float)failures/(float)NUM_TESTS);
