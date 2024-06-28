@@ -57,7 +57,7 @@ int main() {
     clock_t t_ope = 0;
     clock_t t_tmp = 0;
 
-    int errors = 0;
+    uint16_t errors = 0;
 
     for(int i=0; i<NUM_TESTS; i++) {
 
