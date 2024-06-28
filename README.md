@@ -37,4 +37,5 @@ TODO:
 - in csprng_hash.h setup unique API for hashing and csprng
 - verify the usability of SHA_3_LIBKECCAK in sha3.h
 - add ifdefs to only use parallel keccak when compiling for avx2
+- move files from directory "keccak-times4" to "lib" and "include"
 ```

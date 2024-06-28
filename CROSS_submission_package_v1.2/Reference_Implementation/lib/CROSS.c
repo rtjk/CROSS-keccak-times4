@@ -435,25 +435,28 @@ int CROSS_verify(const pubkey_t *const PK,
 #endif
 
 #if defined(RSDP)
-    uint8_t cmt_0_i_input[DENSELY_PACKED_FQ_SYN_SIZE+
-                          DENSELY_PACKED_FZ_VEC_SIZE+
-                          SALT_LENGTH_BYTES+sizeof(uint16_t)];
+    uint8_t cmt_0_i_input[4][DENSELY_PACKED_FQ_SYN_SIZE+
+                            DENSELY_PACKED_FZ_VEC_SIZE+
+                            SALT_LENGTH_BYTES+sizeof(uint16_t)];
     const int offset_salt = DENSELY_PACKED_FQ_SYN_SIZE+DENSELY_PACKED_FZ_VEC_SIZE;
     const int offset_round_idx = offset_salt+SALT_LENGTH_BYTES;
 #elif defined(RSDPG)
-    uint8_t cmt_0_i_input[DENSELY_PACKED_FQ_SYN_SIZE+
-                          DENSELY_PACKED_FZ_RSDP_G_VEC_SIZE+
-                          SALT_LENGTH_BYTES+sizeof(uint16_t)];
+    uint8_t cmt_0_i_input[4][DENSELY_PACKED_FQ_SYN_SIZE+
+                            DENSELY_PACKED_FZ_RSDP_G_VEC_SIZE+
+                            SALT_LENGTH_BYTES+sizeof(uint16_t)];
     const int offset_salt = DENSELY_PACKED_FQ_SYN_SIZE+DENSELY_PACKED_FZ_RSDP_G_VEC_SIZE;
     const int offset_round_idx = offset_salt+SALT_LENGTH_BYTES;
 #endif
-    /* cmt_0_i_input is syndrome||sigma ||salt */
-    memcpy(cmt_0_i_input+offset_salt, sig->salt, SALT_LENGTH_BYTES);
 
-    /* cmt_1_i_input is concat(seed,salt,round index) */
-    uint8_t cmt_1_i_input[SEED_LENGTH_BYTES+SALT_LENGTH_BYTES+sizeof(uint16_t)];
-    memcpy(cmt_1_i_input+SEED_LENGTH_BYTES, sig->salt, SALT_LENGTH_BYTES);
+    uint8_t cmt_1_i_input[4][SEED_LENGTH_BYTES+SALT_LENGTH_BYTES+sizeof(uint16_t)];
 
+    /* place the salt in the hash input for all parallel instances of keccak */
+    for(int instance=0; instance<4; instance++) {
+        /* cmt_0_i_input is syndrome||sigma ||salt */
+        memcpy(cmt_0_i_input[instance]+offset_salt, sig->salt, SALT_LENGTH_BYTES);
+        /* cmt_1_i_input is concat(seed,salt,round index) */
+        memcpy(cmt_1_i_input[instance]+SEED_LENGTH_BYTES, sig->salt, SALT_LENGTH_BYTES);
+    }
     uint8_t cmt_0[T][HASH_DIGEST_LENGTH] = {0};
     uint8_t cmt_1[T][HASH_DIGEST_LENGTH] = {0};
 
@@ -465,6 +468,12 @@ int CROSS_verify(const pubkey_t *const PK,
 
     FQ_ELEM y[T][N];
 
+    /* enqueue the calls to hash */
+    int to_hash_cmt_1 = 0;
+    int to_hash_cmt_0 = 0;
+    int round_idx_queue_cmt_1[4] = {0};
+    int round_idx_queue_cmt_0[4] = {0};
+
     int used_rsps = 0;
     int is_signature_ok = 1;
     for(uint16_t i = 0; i< T; i++){
@@ -475,13 +484,34 @@ int CROSS_verify(const pubkey_t *const PK,
         uint16_t domain_sep_idx_hash = domain_sep_i+HASH_CSPRNG_DOMAIN_SEP_CONST;
 
         if(fixed_weight_b[i] == 1){
-            memcpy(cmt_1_i_input,
+
+            /* save the index for the hash output */
+            to_hash_cmt_1++;
+            round_idx_queue_cmt_1[to_hash_cmt_1-1] = i;
+
+            memcpy(cmt_1_i_input[to_hash_cmt_1-1],
                    rounds_seeds+SEED_LENGTH_BYTES*i,
                    SEED_LENGTH_BYTES);
 
-            cmt_1_i_input[SEED_LENGTH_BYTES+SALT_LENGTH_BYTES] = (domain_sep_idx_hash >> 8) &0xFF;
-            cmt_1_i_input[SEED_LENGTH_BYTES+SALT_LENGTH_BYTES+1] = domain_sep_idx_hash & 0xFF;
-            hash(cmt_1[i],cmt_1_i_input,sizeof(cmt_1_i_input));
+            cmt_1_i_input[to_hash_cmt_1-1][SEED_LENGTH_BYTES+SALT_LENGTH_BYTES] = (domain_sep_idx_hash >> 8) &0xFF;
+            cmt_1_i_input[to_hash_cmt_1-1][SEED_LENGTH_BYTES+SALT_LENGTH_BYTES+1] = domain_sep_idx_hash & 0xFF;
+
+            /* hash in batches of 4 (or less when changing tree level) */
+            if(to_hash_cmt_1 == 4 || i == T-1){
+                par_hash(
+                    to_hash_cmt_1,
+                    cmt_1[round_idx_queue_cmt_1[0]],
+                    cmt_1[round_idx_queue_cmt_1[1]],
+                    cmt_1[round_idx_queue_cmt_1[2]],
+                    cmt_1[round_idx_queue_cmt_1[3]],
+                    cmt_1_i_input[0],
+                    cmt_1_i_input[1],
+                    cmt_1_i_input[2],
+                    cmt_1_i_input[3],
+                    sizeof(cmt_1_i_input)/4
+                );
+                to_hash_cmt_1 = 0;
+            }
 
             /* CSPRNG is fed with concat(seed,salt,round index) represented
             * as a 2 bytes little endian unsigned integer */
@@ -511,13 +541,18 @@ int CROSS_verify(const pubkey_t *const PK,
                                        u_tilde);
             fq_dz_norm(y[i]);
         } else {
+
+            /* save the index for the hash output */
+            to_hash_cmt_0++;
+            round_idx_queue_cmt_0[to_hash_cmt_0-1] = i;
+
             /* place y[i] in the buffer for later on hashing */
             unpack_fq_vec(y[i], sig->rsp_0[used_rsps].y);
 
             FZ_ELEM sigma_local[N];
 #if defined(RSDP)
             /*sigma is memcpy'ed directly into cmt_0 input buffer */
-            FZ_ELEM* sigma_ptr = cmt_0_i_input+DENSELY_PACKED_FQ_SYN_SIZE;
+            FZ_ELEM* sigma_ptr = cmt_0_i_input[to_hash_cmt_0-1]+DENSELY_PACKED_FQ_SYN_SIZE;
 	        unpack_fz_vec(sigma_local, sig->rsp_0[used_rsps].sigma);
             memcpy(sigma_ptr,
                    &sig->rsp_0[used_rsps].sigma,
@@ -526,7 +561,7 @@ int CROSS_verify(const pubkey_t *const PK,
                               is_zz_vec_in_restr_group(sigma_local);
 #elif defined(RSDPG)
             /*delta is memcpy'ed directly into cmt_0 input buffer */
-            FZ_ELEM* delta_ptr = cmt_0_i_input+DENSELY_PACKED_FQ_SYN_SIZE;
+            FZ_ELEM* delta_ptr = cmt_0_i_input[to_hash_cmt_0-1]+DENSELY_PACKED_FQ_SYN_SIZE;
             memcpy(delta_ptr,
                    &sig->rsp_0[used_rsps].delta,
                    DENSELY_PACKED_FZ_RSDP_G_VEC_SIZE);
@@ -551,11 +586,26 @@ int CROSS_verify(const pubkey_t *const PK,
                                         beta[i],
                                         pub_syn);
             fq_dz_norm_synd(to_compress);
-            pack_fq_syn(cmt_0_i_input,to_compress);
-            cmt_0_i_input[offset_round_idx] = (domain_sep_idx_hash >> 8) & 0xFF;
-            cmt_0_i_input[offset_round_idx+1] = domain_sep_idx_hash & 0xFF;
+            pack_fq_syn(cmt_0_i_input[to_hash_cmt_0-1],to_compress);
+            cmt_0_i_input[to_hash_cmt_0-1][offset_round_idx] = (domain_sep_idx_hash >> 8) & 0xFF;
+            cmt_0_i_input[to_hash_cmt_0-1][offset_round_idx+1] = domain_sep_idx_hash & 0xFF;
 
-            hash(cmt_0[i], cmt_0_i_input, sizeof(cmt_0_i_input));
+            /* hash in batches of 4 (or less when changing tree level) */
+            if(to_hash_cmt_0 == 4 || i == T-1){
+                par_hash(
+                    to_hash_cmt_0,
+                    cmt_0[round_idx_queue_cmt_0[0]],
+                    cmt_0[round_idx_queue_cmt_0[1]],
+                    cmt_0[round_idx_queue_cmt_0[2]],
+                    cmt_0[round_idx_queue_cmt_0[3]],
+                    cmt_0_i_input[0],
+                    cmt_0_i_input[1],
+                    cmt_0_i_input[2],
+                    cmt_0_i_input[3],
+                    sizeof(cmt_0_i_input)/4
+                );
+                to_hash_cmt_0 = 0;
+            }
         }
     } /* end for iterating on ZKID iterations */
 
