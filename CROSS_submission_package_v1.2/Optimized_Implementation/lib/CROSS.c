@@ -546,22 +546,6 @@ int CROSS_verify(const pubkey_t *const PK,
             cmt_1_i_input[to_hash_cmt_1-1][SEED_LENGTH_BYTES+SALT_LENGTH_BYTES] = (domain_sep_idx_hash >> 8) &0xFF;
             cmt_1_i_input[to_hash_cmt_1-1][SEED_LENGTH_BYTES+SALT_LENGTH_BYTES+1] = domain_sep_idx_hash & 0xFF;
 
-            /* hash in batches of 4 (or less when changing tree level) */
-            if(to_hash_cmt_1 == 4 || i == T-1){
-                par_hash(
-                    to_hash_cmt_1,
-                    cmt_1[round_idx_queue_cmt_1[0]],
-                    cmt_1[round_idx_queue_cmt_1[1]],
-                    cmt_1[round_idx_queue_cmt_1[2]],
-                    cmt_1[round_idx_queue_cmt_1[3]],
-                    cmt_1_i_input[0],
-                    cmt_1_i_input[1],
-                    cmt_1_i_input[2],
-                    cmt_1_i_input[3],
-                    sizeof(cmt_1_i_input)/4
-                );
-                to_hash_cmt_1 = 0;
-            }
 
             /* CSPRNG is fed with concat(seed,salt,round index) represented
             * as a 2 bytes little endian unsigned integer */
@@ -652,22 +636,38 @@ int CROSS_verify(const pubkey_t *const PK,
             cmt_0_i_input[to_hash_cmt_0-1][offset_round_idx] = (domain_sep_idx_hash >> 8) &0xFF;
             cmt_0_i_input[to_hash_cmt_0-1][offset_round_idx+1] = domain_sep_idx_hash & 0xFF;
 
-            /* hash in batches of 4 (or less when changing tree level) */
-            if(to_hash_cmt_0 == 4 || i == T-1){
-                par_hash(
-                    to_hash_cmt_0,
-                    cmt_0[round_idx_queue_cmt_0[0]],
-                    cmt_0[round_idx_queue_cmt_0[1]],
-                    cmt_0[round_idx_queue_cmt_0[2]],
-                    cmt_0[round_idx_queue_cmt_0[3]],
-                    cmt_0_i_input[0],
-                    cmt_0_i_input[1],
-                    cmt_0_i_input[2],
-                    cmt_0_i_input[3],
-                    sizeof(cmt_0_i_input)/4
-                );
-                to_hash_cmt_0 = 0;
-            }
+        }
+        /* hash committment 1 in batches of 4 (or less on the last round) */
+        if(to_hash_cmt_1 == 4 || i == T-1){
+            par_hash(
+                to_hash_cmt_1,
+                cmt_1[round_idx_queue_cmt_1[0]],
+                cmt_1[round_idx_queue_cmt_1[1]],
+                cmt_1[round_idx_queue_cmt_1[2]],
+                cmt_1[round_idx_queue_cmt_1[3]],
+                cmt_1_i_input[0],
+                cmt_1_i_input[1],
+                cmt_1_i_input[2],
+                cmt_1_i_input[3],
+                sizeof(cmt_1_i_input)/4
+            );
+            to_hash_cmt_1 = 0;
+        }
+        /* hash committment 0 in batches of 4 (or less on the last round) */
+        if(to_hash_cmt_0 == 4 || i == T-1){
+            par_hash(
+                to_hash_cmt_0,
+                cmt_0[round_idx_queue_cmt_0[0]],
+                cmt_0[round_idx_queue_cmt_0[1]],
+                cmt_0[round_idx_queue_cmt_0[2]],
+                cmt_0[round_idx_queue_cmt_0[3]],
+                cmt_0_i_input[0],
+                cmt_0_i_input[1],
+                cmt_0_i_input[2],
+                cmt_0_i_input[3],
+                sizeof(cmt_0_i_input)/4
+            );
+            to_hash_cmt_0 = 0;
         }
     } /* end for iterating on ZKID iterations */
 
