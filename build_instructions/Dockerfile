@@ -1,3 +1,10 @@
+# This Dockerfile shows how to build and run the speed test
+# Actual tests are run on bare-metal, not in Docker
+
+# Build and run:
+# docker build -t CROSS-keccak-times4-image .
+# docker run --rm -it  CROSS-keccak-times4-image
+
 FROM ubuntu:22.04
 
 ENV NPROC 4
@@ -20,11 +27,11 @@ RUN rm -rf build; \
     make -j ${NPROC} && \
     cd ..
 
-    
-STOPSIGNAL SIGTERM
+# TODO: set CPU frqeuency to min using cpu-freq to make test more repeatable
+
+# Run speed test and save results.txt
 WORKDIR /my/CROSS-keccak-times4/CROSS_submission_package_v1.2/Additional_Implementations/test_speed/build/bin
-ENTRYPOINT \
-    # Open a shell
-    /bin/bash && \
-    # Run the speed test
-    for file in *; do if [[ -x "$file" && ! -d "$file" ]]; then echo "$file"; ./"$file"; fi; done
+RUN bash -c 'for file in *; do if [[ -x $file && ! -d $file ]]; then echo $file >> results.txt; ./$file >> results.txt; fi; done'
+
+STOPSIGNAL SIGTERM
+ENTRYPOINT /bin/bash
