@@ -194,7 +194,7 @@ void CROSS_sign(const prikey_t *SK,
 #endif
 
     uint8_t cmt_1_i_input[4][SEED_LENGTH_BYTES+
-                          SALT_LENGTH_BYTES+sizeof(uint16_t)];
+                            SALT_LENGTH_BYTES+sizeof(uint16_t)];
 
     /* place the salt in the hash input for all parallel instances of keccak */
     for(int instance=0; instance<4; instance++) {

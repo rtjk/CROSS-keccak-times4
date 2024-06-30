@@ -78,7 +78,7 @@ int main() {
         t_ope += t_tmp;
         assert(errors == 0);
     }
-    printf("%-15i %-15i %-15i\n", t_key, t_sig, t_ope);
+    printf("%-15ld %-15ld %-15ld\n", t_key, t_sig, t_ope);
 
     free(m);
     free(m1);
