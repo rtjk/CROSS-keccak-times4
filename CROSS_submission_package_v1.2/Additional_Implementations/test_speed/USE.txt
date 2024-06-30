@@ -10,3 +10,7 @@ rm -rf build; mkdir build && cd build && cmake ../ && make && echo "# BUILD AND 
 sudo cpufreq-set -c 0 --min 400000 --max 400000 && sudo cpufreq-set -c 1 --min 400000 --max 400000 && sudo cpufreq-set -c 2 --min 400000 --max 400000 && sudo cpufreq-set -c 3 --min 400000 --max 400000
 cd build/bin
 for file in *; do if [[ -x "$file" && ! -d "$file" ]]; then echo "$file"; ./"$file"; fi; done
+
+# KAT
+rm -rf build; mkdir build; cd build; cmake ../; make; echo "# BUILD AND MAKE DONE"; cd ..
+cd build; ./bin/CROSS_KATgen_cat_1_RSDP_BALANCED; sha256sum PQCsignKAT_77_12912.rsp; cd ..
