@@ -38,4 +38,5 @@ TODO:
 - verify the usability of SHA_3_LIBKECCAK in sha3.h
 - add ifdefs to only use parallel keccak when compiling for avx2
 - move files from directory "keccak-times4" to "lib" and "include"
+- create a branch or tag for baseline (serial keccak in CROSS)
 ```
