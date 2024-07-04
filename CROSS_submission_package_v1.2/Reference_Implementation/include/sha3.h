@@ -77,7 +77,7 @@ void xof_shake_extract(SHAKE_STATE_STRUCT *state,
 #else
 #define SHAKE_STATE_STRUCT shake256incctx
 #endif
-// %%%%%%%%%%%%%%%%%% Self-contained SHAKE Wrappers %%%%%%%%%%%%%%%%%%%%%%%%%%%%
+// %%%%%%%%%%%%%%%%%% Self-contained SHAKE x1 Wrappers %%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 static inline
 void xof_shake_init(SHAKE_STATE_STRUCT *state, int val)
@@ -127,11 +127,11 @@ void xof_shake_extract(SHAKE_STATE_STRUCT *state,
 }
 #endif
 
-///////////////////////////////////////////////////////////////
-//                    SHAKE x4 wrappers                      //
-///////////////////////////////////////////////////////////////
+// %%%%%%%%%%%%%%%%%% Self-contained SHAKE x4 Wrappers %%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 #include "../keccak-times4/fips202_x4.h"
 #define SHAKE_X4_STATE_STRUCT my_par_keccak_context
+
 static inline void xof_shake_x4_init(SHAKE_X4_STATE_STRUCT *states) {
    keccak_x4_init(states);
 }
@@ -154,9 +154,11 @@ static inline void xof_shake_x4_extract(SHAKE_X4_STATE_STRUCT *states,
                        uint32_t singleOutputByteLen){
    keccak_x4_squeeze(states, out1, out2, out3, out4, singleOutputByteLen);
 }
-///////////////////////////////////////////////////////////////
-//                    SHAKE x2 wrappers                      //
-///////////////////////////////////////////////////////////////
+
+// %%%%%%%%%%%%%%%%%% Self-contained SHAKE x2 Wrappers %%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+/* SHAKE_x2 just calls SHAKE_x1 twice. If a suitable SHAKE_x2 implementation becomes available, it should be used instead */
+
 typedef struct {
    SHAKE_STATE_STRUCT state1;
    SHAKE_STATE_STRUCT state2;
@@ -184,10 +186,12 @@ static inline void xof_shake_x2_extract(SHAKE_X2_STATE_STRUCT *states,
    xof_shake_extract(&(states->state1), out1, singleOutputByteLen);
    xof_shake_extract(&(states->state2), out2, singleOutputByteLen);
 }
-///////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////
+
+// %%%%%%%%%%%%%%%%%%%% Parallel SHAKE State Struct %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 typedef struct {
    SHAKE_STATE_STRUCT state1;
    SHAKE_X2_STATE_STRUCT state2;
    SHAKE_X4_STATE_STRUCT state4;
 } par_shake_ctx;
+

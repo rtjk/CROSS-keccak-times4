@@ -49,15 +49,14 @@ void csprng_randombytes(unsigned char * const x,
    xof_shake_extract(csprng_state,x,xlen);
 }
 
-///////////////////////////////////////////////////////////////
-//                SHAKE x2 x3 x4 wrappers                    //
-///////////////////////////////////////////////////////////////
+/**************** Parallel CSPRNG (x2, x3, x4) ***********************/
 
 #define CSPRNG_X2_STATE_T SHAKE_X2_STATE_STRUCT
-#define CSPRNG_X3_STATE_T SHAKE_X4_STATE_STRUCT // CRSPRNG_x3 calls SHAKE_x4 and discards the fourth input/output
+/* CRSPRNG_x3 calls SHAKE_x4 and discards the fourth input/output */
+#define CSPRNG_X3_STATE_T SHAKE_X4_STATE_STRUCT
 #define CSPRNG_X4_STATE_T SHAKE_X4_STATE_STRUCT
 
-// INITIALIZE
+/* initialize */
 static inline
 void initialize_csprng_x2(CSPRNG_X2_STATE_T * const csprng_state,const unsigned char * const seed1, const unsigned char * const seed2,const uint32_t seed_len_bytes) {
    xof_shake_x2_init(csprng_state);
@@ -77,7 +76,7 @@ void initialize_csprng_x4(CSPRNG_X4_STATE_T * const csprng_state,const unsigned 
    xof_shake_x4_update(csprng_state,seed1,seed2,seed3,seed4,seed_len_bytes);
    xof_shake_x4_final(csprng_state);
 }
-// RANDOMBYTES
+/* randombytes */
 static inline
 void csprng_randombytes_x2(unsigned char * const x1, unsigned char * const x2, uint64_t xlen, CSPRNG_X2_STATE_T * const csprng_state){
    xof_shake_x2_extract(csprng_state,x1,x2,xlen);
@@ -92,9 +91,7 @@ void csprng_randombytes_x4(unsigned char * const x1,unsigned char * const x2,uns
    xof_shake_x4_extract(csprng_state,x1,x2,x3,x4,xlen);
 }
 
-///////////////////////////////////////////////////////////////
-//  SINGLE INTERFACE FOR ALL SHAKE VERSIONS (x1 x2 x3 x4)    //
-///////////////////////////////////////////////////////////////
+/************** Single API for Parallel CSPRNG *******************/
 
 #define PAR_CSPRNG_STATE_T par_shake_ctx
 
@@ -111,23 +108,6 @@ void par_csprng_randombytes(int par_level, PAR_CSPRNG_STATE_T * const states, un
    else if(par_level == 2) csprng_randombytes_x2(x1, x2, xlen, &(states->state2));
    else if(par_level == 3) csprng_randombytes_x3(x1, x2, x3, xlen, &(states->state4));
    else if(par_level == 4) csprng_randombytes_x4(x1, x2, x3, x4, xlen, &(states->state4));
-}
-
-static inline
-void par_hash(
-               int par_level,
-               uint8_t digest_1[HASH_DIGEST_LENGTH], 
-               uint8_t digest_2[HASH_DIGEST_LENGTH],
-               uint8_t digest_3[HASH_DIGEST_LENGTH],
-               uint8_t digest_4[HASH_DIGEST_LENGTH],
-               const unsigned char *const m_1, 
-               const unsigned char *const m_2,
-               const unsigned char *const m_3,
-               const unsigned char *const m_4,
-               const uint64_t mlen){
-   PAR_CSPRNG_STATE_T states;
-   par_initialize_csprng(par_level, &states, m_1, m_2, m_3, m_4, mlen);
-   par_csprng_randombytes(par_level, &states, digest_1, digest_2, digest_3, digest_4, HASH_DIGEST_LENGTH);
 }
 
 /******************************************************************************/
@@ -156,6 +136,25 @@ void hash(uint8_t digest[HASH_DIGEST_LENGTH],
    xof_shake_extract(&csprng_state,digest,HASH_DIGEST_LENGTH);
 }
 
+#define par_xof_input par_initialize_csprng
+#define par_xof_output par_csprng_randombytes
+
+static inline
+void par_hash(
+               int par_level,
+               uint8_t digest_1[HASH_DIGEST_LENGTH], 
+               uint8_t digest_2[HASH_DIGEST_LENGTH],
+               uint8_t digest_3[HASH_DIGEST_LENGTH],
+               uint8_t digest_4[HASH_DIGEST_LENGTH],
+               const unsigned char *const m_1, 
+               const unsigned char *const m_2,
+               const unsigned char *const m_3,
+               const unsigned char *const m_4,
+               const uint64_t mlen){
+   PAR_CSPRNG_STATE_T states;
+   par_xof_input(par_level, &states, m_1, m_2, m_3, m_4, mlen);
+   par_xof_output(par_level, &states, digest_1, digest_2, digest_3, digest_4, HASH_DIGEST_LENGTH);
+}
 
 /********************** CSPRNG Sampling functions helpers ********************/
 
