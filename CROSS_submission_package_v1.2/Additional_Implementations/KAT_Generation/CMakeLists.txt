@@ -60,8 +60,7 @@ set(HEADERS
     ${COMMON_DIR}/keccak-times4/align.h
     ${COMMON_DIR}/keccak-times4/brg_endian.h
     ${COMMON_DIR}/keccak-times4/KeccakP-1600-times4-SnP.h
-    ${COMMON_DIR}/keccak-times4/my_constants.h
-    ${COMMON_DIR}/keccak-times4/my_par_keccak.h
+    ${COMMON_DIR}/keccak-times4/fips202_x4.h
     ${COMMON_DIR}/keccak-times4/SIMD256-config.h
 )
 
@@ -90,7 +89,7 @@ set(SOURCES
     ${COMMON_DIR}/lib/sign.c
     # keccak-times4
     ${COMMON_DIR}/keccak-times4/KeccakP-1600-times4-SIMD256.c
-    ${COMMON_DIR}/keccak-times4/my_par_keccak.c
+    ${COMMON_DIR}/keccak-times4/fips202_x4.c
 )
 
 foreach(category RANGE 1 5 2)

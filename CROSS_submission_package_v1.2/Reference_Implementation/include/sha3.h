@@ -130,10 +130,10 @@ void xof_shake_extract(SHAKE_STATE_STRUCT *state,
 ///////////////////////////////////////////////////////////////
 //                    SHAKE x4 wrappers                      //
 ///////////////////////////////////////////////////////////////
-#include "../keccak-times4/my_par_keccak.h"
+#include "../keccak-times4/fips202_x4.h"
 #define SHAKE_X4_STATE_STRUCT my_par_keccak_context
 static inline void xof_shake_x4_init(SHAKE_X4_STATE_STRUCT *states) {
-   my_par_keccak_start(states);
+   keccak_x4_init(states);
 }
 static inline void xof_shake_x4_update(SHAKE_X4_STATE_STRUCT *states,
                       const unsigned char *in1,
@@ -141,10 +141,10 @@ static inline void xof_shake_x4_update(SHAKE_X4_STATE_STRUCT *states,
                       const unsigned char *in3,
                       const unsigned char *in4,
                       uint32_t singleInputByteLen) {
-   my_par_keccak_input(states, in1, in2, in3, in4, singleInputByteLen);
+   keccak_x4_absorb(states, in1, in2, in3, in4, singleInputByteLen);
 }
 static inline void xof_shake_x4_final(SHAKE_X4_STATE_STRUCT *states) {
-   my_par_keccak_stop(states);
+   keccak_x4_finalize(states);
 }
 static inline void xof_shake_x4_extract(SHAKE_X4_STATE_STRUCT *states,
                        unsigned char *out1,
@@ -152,7 +152,7 @@ static inline void xof_shake_x4_extract(SHAKE_X4_STATE_STRUCT *states,
                        unsigned char *out3,
                        unsigned char *out4,
                        uint32_t singleOutputByteLen){
-   my_par_keccak_output(states, out1, out2, out3, out4, singleOutputByteLen);
+   keccak_x4_squeeze(states, out1, out2, out3, out4, singleOutputByteLen);
 }
 ///////////////////////////////////////////////////////////////
 //                    SHAKE x2 wrappers                      //
