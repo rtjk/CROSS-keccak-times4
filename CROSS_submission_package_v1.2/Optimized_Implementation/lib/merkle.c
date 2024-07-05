@@ -43,6 +43,9 @@
 #define NOT_COMPUTED 0
 #define COMPUTED 1
 
+/* maximum number of parallel executions of the hash function */
+#define PAR_DEGREE 4
+
 /*
  * setup_tree()
  *
@@ -172,7 +175,7 @@ void generate_merkle_tree(unsigned char merkle_tree[NUM_NODES_MERKLE_TREE *
                           unsigned char commitments[T][HASH_DIGEST_LENGTH])
 {
     size_t i;
-    unsigned int node_ctr, parent_layer;
+    uint32_t node_ctr, parent_layer;
 
     uint16_t merkle_leaf_indices[T];
     uint16_t layer_offsets[LOG2(T)+1];
@@ -190,18 +193,42 @@ void generate_merkle_tree(unsigned char merkle_tree[NUM_NODES_MERKLE_TREE *
                HASH_DIGEST_LENGTH);
     }
 
-    /* Hash the child nodes */
+    /* enqueue the calls to hash */
+    int to_hash = 0;
+    int out_pos_queue[4] = {0};
+    int in_pos_queue[4] = {0};
+
+    /* create the hash tree starting from the leaves */
     node_ctr = 0;
     parent_layer = LOG2(T)-1;
     for (i=NUM_NODES_MERKLE_TREE-1; i>0; i -= 2) {
-        hash(merkle_tree + OFFSET(PARENT(i) + layer_offsets[parent_layer]), merkle_tree + OFFSET(SIBLING(i)), 2*HASH_DIGEST_LENGTH);
-        if (node_ctr >= nodes_per_layer[parent_layer+1] - 2) {
+        /* save the position of the hash inputs and outputs */
+        to_hash++;
+        out_pos_queue[to_hash-1] = OFFSET(PARENT(i) + layer_offsets[parent_layer]);
+        in_pos_queue[to_hash-1] = OFFSET(SIBLING(i));
+        /* go up to the next tree level */
+        if (node_ctr >= (uint32_t) nodes_per_layer[parent_layer+1] - 2) {
             parent_layer--;
             node_ctr = 0;
         } else {
             node_ctr += 2;
         }
-    }
+        /* hash in batches of 4 (or less when changing tree level) */
+        if(to_hash == 4 || node_ctr == 0) {
+            par_hash(
+                to_hash,
+                merkle_tree + out_pos_queue[0],
+                merkle_tree + out_pos_queue[1],
+                merkle_tree + out_pos_queue[2],
+                merkle_tree + out_pos_queue[3],
+                merkle_tree + in_pos_queue[0],
+                merkle_tree + in_pos_queue[1],
+                merkle_tree + in_pos_queue[2],
+                merkle_tree + in_pos_queue[3],
+                2*HASH_DIGEST_LENGTH);
+            to_hash = 0;
+        }
+    }   
 }
 
 
@@ -284,11 +311,8 @@ void rebuild_merkle_tree(unsigned char merkle_tree[NUM_NODES_MERKLE_TREE * HASH_
     uint16_t nodes_per_layer[LOG2(T)+1];
 
     uint16_t ctr;
-    unsigned int node_ctr, parent_layer;
+    uint32_t node_ctr, parent_layer;
     size_t i;
-
-    /* Input consists of hash digests stored at child nodes and the index of the parent node for domain separation */
-    unsigned char hash_input[2*HASH_DIGEST_LENGTH];
 
     /* Move leafs in correct positions of binary merkle tree */
     /* Setup the tree again, computing the offsets and from that, the leaf indices */
@@ -302,6 +326,12 @@ void rebuild_merkle_tree(unsigned char merkle_tree[NUM_NODES_MERKLE_TREE * HASH_
             memcpy(merkle_tree + merkle_leaf_indices[i]*HASH_DIGEST_LENGTH, commitments + i, HASH_DIGEST_LENGTH);
         }
     }
+
+    /* enqueue the calls to hash */
+    int to_hash = 0;
+    int out_pos_queue[4] = {0};
+    int in_pos_queue[4] = {0};
+
     /* Create hash tree by hashing valid leaf nodes */
     ctr = 0;
     node_ctr = 0;
@@ -310,41 +340,65 @@ void rebuild_merkle_tree(unsigned char merkle_tree[NUM_NODES_MERKLE_TREE * HASH_
 
         /* Both siblings are unused, but it must be kept track of the node and layer counter to chose the right offsets */
         if (flag_tree_valid[i] == INVALID_MERKLE_NODE && flag_tree_valid[SIBLING(i)] == INVALID_MERKLE_NODE) {
-            if (node_ctr >= nodes_per_layer[parent_layer+1] - 2) {
+            if (node_ctr >= (uint32_t) nodes_per_layer[parent_layer+1] - 2) {
                 parent_layer--;
                 node_ctr = 0;
             } else {
                 node_ctr += 2;
             }
-            continue;
         }
 
-        /* Prepare input to hash */
-        /* Process right sibling from the tree if valid, otherwise take it from the merkle proof */
-        if (flag_tree_valid[i] == VALID_MERKLE_NODE) {
-            memcpy(hash_input + HASH_DIGEST_LENGTH, merkle_tree + OFFSET(i), HASH_DIGEST_LENGTH);
-        } else {
-            memcpy(hash_input + HASH_DIGEST_LENGTH, merkle_proof + OFFSET(ctr), HASH_DIGEST_LENGTH);
-            ctr++;
+        else{
+            /* at least one of the siblings is valid: there is a hash to compute */
+            to_hash++;
+            /* save the position of the hash inputs and outputs */
+            out_pos_queue[to_hash-1] = OFFSET(PARENT(i) + layer_offsets[parent_layer]);
+            in_pos_queue[to_hash-1] = OFFSET(SIBLING(i));
+
+            /* if the right sibling is invalid, copy it from the merkle proof */
+            if (flag_tree_valid[i] == INVALID_MERKLE_NODE) {
+                memcpy(
+                    merkle_tree + OFFSET(i),
+                    merkle_proof + OFFSET(ctr),
+                    HASH_DIGEST_LENGTH);
+                ctr++;
+            }
+
+            /* if the left sibling is invalid, copy it from the merkle proof */
+            if (flag_tree_valid[SIBLING(i)] == INVALID_MERKLE_NODE) {
+                memcpy(
+                    merkle_tree + OFFSET(SIBLING(i)), 
+                    merkle_proof + OFFSET(ctr), 
+                    HASH_DIGEST_LENGTH);
+                ctr++;
+            }
+
+            /* set the parent node as valid */
+            flag_tree_valid[PARENT(i) + layer_offsets[parent_layer]] = VALID_MERKLE_NODE;
+
+            /* go up to the next tree level */
+            if (node_ctr >= (uint32_t) nodes_per_layer[parent_layer+1] - 2) {
+                parent_layer--;
+                node_ctr = 0;
+            } else {
+                node_ctr += 2;
+            }
         }
 
-        /* Process left sibling from the tree if valid, otherwise take it from the merkle proof */
-        if (flag_tree_valid[SIBLING(i)] == VALID_MERKLE_NODE) {
-            memcpy(hash_input, merkle_tree + OFFSET(SIBLING(i)), HASH_DIGEST_LENGTH);
-        } else {
-            memcpy(hash_input, merkle_proof + OFFSET(ctr), HASH_DIGEST_LENGTH);
-            ctr++;
-        }
-
-        /* Hash it and store the digest at the parent node */
-        hash(merkle_tree + OFFSET(PARENT(i) + layer_offsets[parent_layer]), hash_input, 2*HASH_DIGEST_LENGTH);
-        flag_tree_valid[PARENT(i) + layer_offsets[parent_layer]] = VALID_MERKLE_NODE;
-
-        if (node_ctr >= nodes_per_layer[parent_layer+1] - 2) {
-            parent_layer--;
-            node_ctr = 0;
-        } else {
-            node_ctr += 2;
+        /* hash in batches of 4 (or less when changing tree level) */
+        if(to_hash == 4 || node_ctr == 0) {
+            par_hash(
+                to_hash,
+                merkle_tree + out_pos_queue[0],
+                merkle_tree + out_pos_queue[1],
+                merkle_tree + out_pos_queue[2],
+                merkle_tree + out_pos_queue[3],
+                merkle_tree + in_pos_queue[0],
+                merkle_tree + in_pos_queue[1],
+                merkle_tree + in_pos_queue[2],
+                merkle_tree + in_pos_queue[3],
+                2*HASH_DIGEST_LENGTH);
+            to_hash = 0;
         }
     }
 }
