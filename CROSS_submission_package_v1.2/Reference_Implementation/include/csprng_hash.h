@@ -112,13 +112,17 @@ void par_csprng_randombytes(int par_level, PAR_CSPRNG_STATE_T * const states, un
 
 /******************************************************************************/
 
+/* use valgrind to check for secret-dependent branching (skipp randombytes initialization) */
+#define VALGRIND_CHECK_SECRET_DEPENDENT_BRANCHING
 /* global csprng state employed to have deterministic randombytes for testing */
 extern CSPRNG_STATE_T platform_csprng_state;
 /* extracts xlen bytes from the global CSPRNG */
 static inline
 void randombytes(unsigned char * x,
                  unsigned long long xlen) {
+#ifndef VALGRIND_CHECK_SECRET_DEPENDENT_BRANCHING
    csprng_randombytes(x,xlen,&platform_csprng_state);
+#endif
 }
 
 /************************* HASH functions ********************************/

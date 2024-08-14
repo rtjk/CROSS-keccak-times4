@@ -14,3 +14,7 @@ for file in *; do if [[ -x "$file" && ! -d "$file" ]]; then echo "$file"; ./"$fi
 # KAT
 rm -rf build; mkdir build; cd build; cmake ../; make; echo "# BUILD AND MAKE DONE"; cd ..
 cd build; ./bin/CROSS_KATgen_cat_1_RSDP_BALANCED; sha256sum PQCsignKAT_77_12912.rsp; cd ..
+
+# check secret-dependent control flow
+#define VALGRIND_CHECK_SECRET_DEPENDENT_BRANCHING
+valgrind --track-origins=yes --tool=memcheck --gen-suppressions=all --error-exitcode=1 --max-stackframe=20480000 --num-callers=20 ./build/bin/test_speed.o
