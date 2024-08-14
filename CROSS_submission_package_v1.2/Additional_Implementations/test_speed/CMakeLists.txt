@@ -58,23 +58,22 @@ endif()
 set(COMMON_DIR ${REFERENCE_CODE_DIR})
 set(HEADERS
     ${SPEC_HEADERS}
+    ${COMMON_DIR}/include/align.h
     ${COMMON_DIR}/include/api.h
+    ${COMMON_DIR}/include/brg_endian.h
     ${COMMON_DIR}/include/CROSS.h
     ${COMMON_DIR}/include/csprng_hash.h
-    ${COMMON_DIR}/include/pack_unpack.h
+    ${COMMON_DIR}/include/fips202x4.h
     ${COMMON_DIR}/include/fips202.h
     ${COMMON_DIR}/include/keccakf1600.h
+    ${COMMON_DIR}/include/KeccakP-1600-times4-SnP.h
+    ${COMMON_DIR}/include/merkle_tree.h
+    ${COMMON_DIR}/include/merkle.h
+    ${COMMON_DIR}/include/pack_unpack.h
     ${COMMON_DIR}/include/parameters.h
     ${COMMON_DIR}/include/seedtree.h
     ${COMMON_DIR}/include/sha3.h
-    ${COMMON_DIR}/include/merkle_tree.h
-    ${COMMON_DIR}/include/merkle.h
-    # keccak-times4
-    ${COMMON_DIR}/keccak-times4/align.h
-    ${COMMON_DIR}/keccak-times4/brg_endian.h
-    ${COMMON_DIR}/keccak-times4/KeccakP-1600-times4-SnP.h
-    ${COMMON_DIR}/keccak-times4/fips202_x4.h
-    ${COMMON_DIR}/keccak-times4/SIMD256-config.h
+    ${COMMON_DIR}/include/SIMD256-config.h
 )
 
 if(STANDALONE_KECCAK)
@@ -93,13 +92,12 @@ set(SOURCES
     ${SPEC_SOURCES}
     ${FALLBACK_SOURCES}
     ${COMMON_DIR}/lib/csprng_hash.c
-    ${COMMON_DIR}/lib/pack_unpack.c
-    ${COMMON_DIR}/lib/keccakf1600.c
+    ${COMMON_DIR}/lib/fips202x4.c
     ${COMMON_DIR}/lib/fips202.c
+    ${COMMON_DIR}/lib/keccakf1600.c
+    ${COMMON_DIR}/lib/KeccakP-1600-times4-SIMD256.c
+    ${COMMON_DIR}/lib/pack_unpack.c
     ${COMMON_DIR}/lib/sign.c
-    # keccak-times4
-    ${COMMON_DIR}/keccak-times4/KeccakP-1600-times4-SIMD256.c
-    ${COMMON_DIR}/keccak-times4/fips202_x4.c
 )
 
 ########

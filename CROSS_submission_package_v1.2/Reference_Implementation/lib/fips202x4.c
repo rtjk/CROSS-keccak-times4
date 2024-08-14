@@ -19,7 +19,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "fips202_x4.h"
+#include "fips202x4.h"
 
 void keccak_x4_init(my_par_keccak_context *ctx)
 {

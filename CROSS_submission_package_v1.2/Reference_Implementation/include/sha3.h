@@ -129,7 +129,7 @@ void xof_shake_extract(SHAKE_STATE_STRUCT *state,
 
 // %%%%%%%%%%%%%%%%%% Self-contained SHAKE x4 Wrappers %%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-#include "../keccak-times4/fips202_x4.h"
+#include "fips202x4.h"
 #define SHAKE_X4_STATE_STRUCT my_par_keccak_context
 
 static inline void xof_shake_x4_init(SHAKE_X4_STATE_STRUCT *states) {
