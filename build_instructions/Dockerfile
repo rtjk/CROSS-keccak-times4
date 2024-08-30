@@ -37,4 +37,4 @@ WORKDIR /my/CROSS-keccak-times4/CROSS_submission_package_v1.2/Additional_Impleme
 RUN bash -c 'for file in *; do if [[ -x $file && ! -d $file ]]; then echo $file >> results.txt; ./$file >> results.txt; fi; done'
 
 STOPSIGNAL SIGTERM
-ENTRYPOINT /bin/bash
+ENTRYPOINT cat results.txt && /bin/bash
