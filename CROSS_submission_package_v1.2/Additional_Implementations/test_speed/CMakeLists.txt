@@ -38,8 +38,8 @@ set(SPEC_HEADERS
         ${BASE_DIR}/include/fq_arith.h )
 set(SPEC_SOURCES
         ${BASE_DIR}/lib/CROSS.c
-        ${BASE_DIR}/lib/merkle.c
-        ${BASE_DIR}/lib/seedtree.c
+        # ${BASE_DIR}/lib/merkle.c
+        # ${BASE_DIR}/lib/seedtree.c
 )
 else()
 message("Compiling optimized AVX2 code")
@@ -50,8 +50,8 @@ set(SPEC_HEADERS
         ${BASE_DIR}/include/fq_arith.h )
 set(SPEC_SOURCES
         ${BASE_DIR}/lib/CROSS.c
-        ${BASE_DIR}/lib/merkle.c
-        ${BASE_DIR}/lib/seedtree.c
+        # ${BASE_DIR}/lib/merkle.c
+        # ${BASE_DIR}/lib/seedtree.c
 )
 endif()
 
@@ -98,6 +98,8 @@ set(SOURCES
     ${COMMON_DIR}/lib/KeccakP-1600-times4-SIMD256.c
     ${COMMON_DIR}/lib/pack_unpack.c
     ${COMMON_DIR}/lib/sign.c
+    ${COMMON_DIR}/lib/merkle.c
+    ${COMMON_DIR}/lib/seedtree.c
 )
 
 ########
