@@ -8,7 +8,7 @@
 #include "api.h"
 #include "csprng_hash.h"
 
-#define NUM_TESTS 1 //100000
+#define NUM_TESTS 100000
 #define PROGRESS 300
 
 void simple_randombytes(unsigned char *x, unsigned long long xlen) {
