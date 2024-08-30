@@ -18,6 +18,9 @@ RUN apt install -y git cmake libssl-dev
 WORKDIR /my
 RUN git clone --depth 1 https://github.com/rtjk/CROSS-keccak-times4
 
+# Alternatively clone the baseline branch (no parallel keccak)
+#RUN git clone --depth 1 -branch baseline-serial https://github.com/rtjk/CROSS-keccak-times4
+
 # Build
 WORKDIR /my/CROSS-keccak-times4/CROSS_submission_package_v1.2/Additional_Implementations/test_speed/
 RUN rm -rf build; \
