@@ -2,7 +2,7 @@
 # Actual tests are run on bare-metal, not in Docker
 
 # Build and run:
-# docker build -t CROSS-keccak-times4-image .
+# docker build --no-cache -t CROSS-keccak-times4-image .
 # docker run --rm -it  CROSS-keccak-times4-image
 
 FROM ubuntu:22.04

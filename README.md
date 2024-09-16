@@ -9,7 +9,7 @@ Test setup:
 Run speed test:
 * Build:
     ```
-    cd Additional_Implementations/test_speed/
+    cd Additional_Implementations/Benchmarking/
     rm -rf build
     mkdir build
     cd build
@@ -26,8 +26,7 @@ Run speed test:
     ```
 * Collect results:
     ```
-    cd build/bin
-    for file in *; do if [[ -x "$file" && ! -d "$file" ]]; then echo "$file"; ./"$file"; fi; done
+    ./bench_all.sh
     ```
 
 #
@@ -37,7 +36,4 @@ TODO:
 - in csprng_hash.h setup unique API for hashing and csprng
 - verify the usability of SHA_3_LIBKECCAK in sha3.h
 - add ifdefs to only use parallel keccak when compiling for avx2
-- move files from directory "keccak-times4" to "lib" and "include"
-- create a branch or tag for baseline (serial keccak in CROSS)
-- delete keccak parallelization from reference implementation (should only be avx2)
 ```

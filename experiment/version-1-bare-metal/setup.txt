@@ -1,0 +1,4 @@
+Debian 12
+Intel Core i7-6500U
+Base Frequency 2.50 GHz
+Set Frequency 400 MHz
