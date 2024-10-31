@@ -198,6 +198,11 @@ static void compute_seeds_to_publish(
    memset(flags_tree_to_publish,
           NOT_TO_PUBLISH,
           NUM_INNER_NODES_STENCIL_SEED_TREE*sizeof(unsigned char));
+   /* flag also the missing leaves on the right of the last level, this helps
+    * to reduce the total number of nodes to publish in the incomplete tree */
+   memset(flags_tree_to_publish + NUM_INNER_NODES_STENCIL_SEED_TREE + T,
+         TO_PUBLISH,
+         (NUM_LEAVES_STENCIL_SEED_TREE - T) * sizeof(unsigned char));
    /* compute the value for the internal nodes of the tree starting from the
     * fathers of the leaves, right to left */
    for (int i = NUM_LEAVES_STENCIL_SEED_TREE-2; i >= 0; i--) {

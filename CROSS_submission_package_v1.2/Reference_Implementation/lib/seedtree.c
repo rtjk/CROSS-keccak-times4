@@ -179,6 +179,11 @@ static void compute_seeds_to_publish(
    memset(flags_tree_to_publish,
           NOT_TO_PUBLISH,
           NUM_INNER_NODES_STENCIL_SEED_TREE*sizeof(unsigned char));
+   /* flag also the missing leaves on the right of the last level, this helps
+    * to reduce the total number of nodes to publish in the incomplete tree */
+   memset(flags_tree_to_publish + NUM_INNER_NODES_STENCIL_SEED_TREE + T,
+         TO_PUBLISH,
+         (NUM_LEAVES_STENCIL_SEED_TREE - T) * sizeof(unsigned char));
    /* compute the value for the internal nodes of the tree starting from the
     * fathers of the leaves, right to left */
    for (int i = NUM_LEAVES_STENCIL_SEED_TREE-2; i >= 0; i--) {
@@ -356,9 +361,12 @@ int regenerate_round_seeds(unsigned char
                 csprng_randombytes(seed_tree + (LEFT_CHILD(father_node_idx)-missing_nodes_before[level+1])*SEED_LENGTH_BYTES,
                                    SEED_LENGTH_BYTES,
                                    &tree_csprng_state);
-                csprng_randombytes(seed_tree + (RIGHT_CHILD(father_node_idx)-missing_nodes_before[level+1])*SEED_LENGTH_BYTES,
-                                   SEED_LENGTH_BYTES,
-                                   &tree_csprng_state);
+                /* check that the right child is not one of the missing leaves */
+                if ((RIGHT_CHILD(father_node_idx) - missing_nodes_before[level+1]) < NUM_NODES_SEED_TREE ) {
+                  csprng_randombytes(seed_tree + (RIGHT_CHILD(father_node_idx)-missing_nodes_before[level+1])*SEED_LENGTH_BYTES,
+                  SEED_LENGTH_BYTES,
+                  &tree_csprng_state);
+                }
           }
       }
       ancestors += (1L << level);
