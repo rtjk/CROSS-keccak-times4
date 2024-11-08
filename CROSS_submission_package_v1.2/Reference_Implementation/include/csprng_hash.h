@@ -112,8 +112,8 @@ void par_csprng_randombytes(int par_level, PAR_CSPRNG_STATE_T * const states, un
 
 /******************************************************************************/
 
-/* use valgrind to check for secret-dependent branching (skipp randombytes initialization) */
-#define VALGRIND_CHECK_SECRET_DEPENDENT_BRANCHING
+/* use valgrind to check for secret-dependent branching (skip randombytes initialization) */
+// #define VALGRIND_CHECK_SECRET_DEPENDENT_BRANCHING
 /* global csprng state employed to have deterministic randombytes for testing */
 extern CSPRNG_STATE_T platform_csprng_state;
 /* extracts xlen bytes from the global CSPRNG */
@@ -177,6 +177,36 @@ FQ_ELEM fq_star_rnd_state(CSPRNG_STATE_T * const csprng_state)
    return rnd_value+1;
 } /* end fq_star_rnd_state */
 
+/********************* Endianness detection and handling **********************/
+
+#define BIG_ENDIAN_SYSTEM 0 // assume little-endian by default
+
+/* Check if we are on a big-endian system:
+ * the __BYTE_ORDER__ macro is defined by the compiler
+ * recent versions of GCC and Clang define it
+ * other methods to detect endianness might be needed when using different compilers */
+#if defined(__BYTE_ORDER__)&&(__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__)
+    #undef BIG_ENDIAN_SYSTEM
+    #define BIG_ENDIAN_SYSTEM 1
+#endif
+
+static inline uint64_t to_little_endian64(uint64_t x) {
+    /* When compiling on a big-endian system, swap the bytes */
+    #if BIG_ENDIAN_SYSTEM
+        return __builtin_bswap64(x);
+    #else
+        return x;
+    #endif
+}
+
+static inline uint32_t to_little_endian32(uint32_t x) {
+    /* When compiling on a big-endian system, swap the bytes */
+    #if BIG_ENDIAN_SYSTEM
+        return __builtin_bswap32(x);
+    #else
+        return x;
+    #endif
+}
 
 /***************** Specialized CSPRNGs for non binary domains *****************/
 
@@ -205,14 +235,14 @@ void CSPRNG_fq_vec(FQ_ELEM res[N],
      * in from the left end */
     csprng_randombytes(CSPRNG_buffer,CSPRNG_buffer_size,csprng_state);    
     int placed = 0;
-    uint64_t sub_buffer = *(uint64_t*)CSPRNG_buffer;
+    uint64_t sub_buffer = to_little_endian64(*(uint64_t*)CSPRNG_buffer);
     int bits_in_sub_buf = 64;
     /* position of the next fresh byte in CSPRNG_buffer*/
     int pos_in_buf = 8;
     while(placed < N){
         if(bits_in_sub_buf <= 32){
             /* get 32 fresh bits from main buffer with a single load */
-            uint32_t refresh_buf = *(uint32_t*) (CSPRNG_buffer+pos_in_buf);
+            uint32_t refresh_buf = to_little_endian32(*(uint32_t*) (CSPRNG_buffer+pos_in_buf));
             pos_in_buf += 4;
             sub_buffer |=  ((uint64_t) refresh_buf) << bits_in_sub_buf;
             bits_in_sub_buf += 32; 
@@ -246,14 +276,14 @@ void CSPRNG_fq_vec_beta(FQ_ELEM res[T],
      * in from the left end */
     csprng_randombytes(CSPRNG_buffer,CSPRNG_buffer_size,csprng_state);    
     int placed = 0;
-    uint64_t sub_buffer = *(uint64_t*)CSPRNG_buffer;
+    uint64_t sub_buffer = to_little_endian64(*(uint64_t*)CSPRNG_buffer);
     int bits_in_sub_buf = 64;
     /* position of the next fresh byte in CSPRNG_buffer*/
     int pos_in_buf = 8;
     while(placed < T){
         if(bits_in_sub_buf <= 32){
             /* get 32 fresh bits from main buffer with a single load */
-            uint32_t refresh_buf = *(uint32_t*) (CSPRNG_buffer+pos_in_buf);
+            uint32_t refresh_buf = to_little_endian32(*(uint32_t*) (CSPRNG_buffer+pos_in_buf));
             pos_in_buf += 4;
             sub_buffer |=  ((uint64_t) refresh_buf) << bits_in_sub_buf;
             bits_in_sub_buf += 32; 
@@ -287,7 +317,7 @@ void CSPRNG_fq_mat(FQ_ELEM res[K][N-K],
      * in from the left end */
     csprng_randombytes(CSPRNG_buffer,CSPRNG_buffer_size,csprng_state);    
     int placed = 0;
-    uint64_t sub_buffer = *(uint64_t*)CSPRNG_buffer;  
+    uint64_t sub_buffer = to_little_endian64(*(uint64_t*)CSPRNG_buffer);
     int bits_in_sub_buf = 64;
     /* position of the next fresh byte in CSPRNG_buffer*/
     int pos_in_buf = 8;
@@ -297,7 +327,7 @@ void CSPRNG_fq_mat(FQ_ELEM res[K][N-K],
             /* get 32 fresh bits from main buffer with a single load */
             // fprintf(stderr,"\nbfq: %d, placed %d, pos_in_buf %d, bufsiz: %d, b_i_b: %d, failures: %d out of %d",
                     // BITS_FOR_Q,placed,pos_in_buf,CSPRNG_buffer_size,bits_in_sub_buf,failures, attempts);
-            uint32_t refresh_buf = *(uint32_t*) (CSPRNG_buffer+pos_in_buf);
+            uint32_t refresh_buf = to_little_endian32(*(uint32_t*) (CSPRNG_buffer+pos_in_buf));
             pos_in_buf += 4;
             sub_buffer |=  ((uint64_t) refresh_buf) << bits_in_sub_buf;
             bits_in_sub_buf += 32; 
@@ -332,14 +362,14 @@ void CSPRNG_zz_vec(FZ_ELEM res[N],
      * in from the left end */
     csprng_randombytes(CSPRNG_buffer,CSPRNG_buffer_size,csprng_state);    
     int placed = 0;
-    uint64_t sub_buffer = *(uint64_t*)CSPRNG_buffer;
+    uint64_t sub_buffer = to_little_endian64(*(uint64_t*)CSPRNG_buffer);
     int bits_in_sub_buf = 64;
     /* position of the next fresh byte in CSPRNG_buffer*/
     int pos_in_buf = 8;
     while(placed < N){
         if(bits_in_sub_buf <= 32){
             /* get 32 fresh bits from main buffer with a single load */
-            uint32_t refresh_buf = *(uint32_t*) (CSPRNG_buffer+pos_in_buf);
+            uint32_t refresh_buf = to_little_endian32(*(uint32_t*) (CSPRNG_buffer+pos_in_buf));
             pos_in_buf += 4;
             sub_buffer |=  ((uint64_t) refresh_buf) << bits_in_sub_buf;
             bits_in_sub_buf += 32; 
@@ -372,14 +402,14 @@ void CSPRNG_zz_inf_w(FZ_ELEM res[M],
      * in from the left end */
     csprng_randombytes(CSPRNG_buffer,CSPRNG_buffer_size,csprng_state);    
     int placed = 0;
-    uint64_t sub_buffer = *(uint64_t*)CSPRNG_buffer;
+    uint64_t sub_buffer = to_little_endian64(*(uint64_t*)CSPRNG_buffer);
     int bits_in_sub_buf = 64;
     /* position of the next fresh byte in CSPRNG_buffer*/
     int pos_in_buf = 8;
     while(placed < M){
         if(bits_in_sub_buf <= 32){
             /* get 32 fresh bits from main buffer with a single load */
-            uint32_t refresh_buf = *(uint32_t*) (CSPRNG_buffer+pos_in_buf);
+            uint32_t refresh_buf = to_little_endian32(*(uint32_t*) (CSPRNG_buffer+pos_in_buf));
             pos_in_buf += 4;
             sub_buffer |=  ((uint64_t) refresh_buf) << bits_in_sub_buf;
             bits_in_sub_buf += 32;             
@@ -411,14 +441,14 @@ void CSPRNG_fz_mat(FZ_ELEM res[M][N-M],
      * in from the left end */
     csprng_randombytes(CSPRNG_buffer,CSPRNG_buffer_size,csprng_state);    
     int placed = 0;
-    uint64_t sub_buffer = *(uint64_t*)CSPRNG_buffer;
+    uint64_t sub_buffer = to_little_endian64(*(uint64_t*)CSPRNG_buffer);
     int bits_in_sub_buf = 64;
     /* position of the next fresh byte in CSPRNG_buffer*/
     int pos_in_buf = 8;
     while(placed < M*(N-M)){
         if(bits_in_sub_buf <= 32){
             /* get 32 fresh bits from main buffer with a single load */
-            uint32_t refresh_buf = *(uint32_t*) (CSPRNG_buffer+pos_in_buf);
+            uint32_t refresh_buf = to_little_endian32(*(uint32_t*) (CSPRNG_buffer+pos_in_buf));
             pos_in_buf += 4;
             sub_buffer |=  ((uint64_t) refresh_buf) << bits_in_sub_buf;
             bits_in_sub_buf += 32;             
