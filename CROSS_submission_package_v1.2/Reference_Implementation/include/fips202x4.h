@@ -37,7 +37,7 @@
 #define DS SHAKE256_DS
 
 #define WORD (64)
-#define MAX_LANES (1152/64 - 1)
+#define MAX_LANES (RATE / (WORD / 8))
 
 /************************************************
  *  Function Prototypes
