@@ -14,6 +14,7 @@
  * 
  */
 
+#include <assert.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -33,6 +34,7 @@ void keccak_x4_absorb(my_par_keccak_context *ctx, const unsigned char *in1, cons
     /* allocate a signle buffer for all 4 inputs */
     unsigned int total_len = 4 * in_len;
     unsigned char *ins = (unsigned char *)malloc(total_len * sizeof(unsigned char));
+    assert(ins != NULL);
     uint8_t* original_ins = ins; // to free the memory later
     memcpy(ins, in1, in_len);
     memcpy(ins + in_len, in2, in_len);
